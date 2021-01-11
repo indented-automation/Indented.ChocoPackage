@@ -17,17 +17,16 @@ build: false
 
 install:
   - pwsh: |
-      Install-Module Configuration, Pester, InvokeBuild -Force -SkipPublisherCheck
-      Import-Module InvokeBuild
+      Install-Module Configuration, Pester -Force -SkipPublisherCheck
       Set-Location $env:APPVEYOR_BUILD_FOLDER
 
 build_script:
   - ps: |
-      Invoke-Build -Task Clean, Build
+      .\build.ps1 -TaskName Clean, Build
 
 test_script:
-  - ps: Invoke-Build -Task Test
-  - pwsh: Invoke-Build -Task Test
+  - ps: .\build.ps1 -TaskName Test
+  - pwsh: .\build.ps1 -TaskName Test
 
 on_success:
   - ps: |
@@ -48,7 +47,7 @@ on_success:
               $galleryModule = Find-Module $moduleManifestPath.BaseName -ErrorAction SilentlyContinue
 
               if (-not $galleryVersion -or $buildVersion -gt $galleryModule.Version) {
-                  Invoke-Build -Task Publish
+                  .\build.ps1 -TaskName Publish
               } else {
                   Write-Host ('Skipping publish: {0} is already published' -f $env:APPVEYOR_REPO_TAG_NAME) -ForegroundColor Green
               }

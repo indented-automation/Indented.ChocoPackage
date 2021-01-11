@@ -1,21 +1,21 @@
-task default @(
-    'Clean'
-    'Build'
-    'Test'
+param (
+    [string[]]$TaskName = ('Clean', 'Build', 'Test')
 )
 
-task Clean {
+function Clean {
     $path = Join-Path -Path $PSScriptRoot -ChildPath 'build'
     if (Test-Path $path) {
         Remove-Item $path -Recurse
     }
 }
 
-task Build {
+function Build {
+    Write-Host (Resolve-Path $PSScriptRoot\*\build.psd1)
+
     Build-Module -Path (Resolve-Path $PSScriptRoot\*\build.psd1)
 }
 
-task Test {
+function Test {
     $modulePath = Join-Path -Path $PSScriptRoot -ChildPath 'build\*\*\*.psd1' |
         Get-Item |
         Where-Object { $_.BaseName -eq $_.Directory.Parent.Name }
@@ -63,10 +63,40 @@ task Test {
     }
 }
 
-task Publish {
+function Publish {
     $modulePath = Join-Path -Path $PSScriptRoot -ChildPath 'build\*\*\*.psd1' |
         Get-Item |
         Where-Object { $_.BaseName -eq $_.Directory.Parent.Name }
 
     Publish-Module -Path $modulePath -NuGetApiKey $env:NuGetApiKey -Repository PSGallery -ErrorAction Stop
 }
+
+function InvokeTask {
+    param (
+        [Parameter(Mandatory, ValueFromPipeline)]
+        [string]$TaskName
+    )
+
+    begin {
+        Write-Host ('Build {0}' -f $PSCommandPath) -ForegroundColor Green
+    }
+
+    process {
+        $ErrorActionPreference = 'Stop'
+        try {
+            $stopWatch = [System.Diagnostics.Stopwatch]::StartNew()
+
+            Write-Host ('Task {0}' -f $TaskName) -ForegroundColor Cyan
+            & "Script:$TaskName"
+            Write-Host ('Done {0} {1}' -f $TaskName, $stopWatch.Elapsed) -ForegroundColor Cyan
+        } catch {
+            Write-Host ('Failed {0} {1}' -f $TaskName, $stopWatch.Elapsed) -ForegroundColor Red
+            Write-Error -ErrorRecord $_ -ErrorAction Continue
+            exit 1
+        } finally {
+            $stopWatch.Stop()
+        }
+    }
+}
+
+$TaskName | InvokeTask
