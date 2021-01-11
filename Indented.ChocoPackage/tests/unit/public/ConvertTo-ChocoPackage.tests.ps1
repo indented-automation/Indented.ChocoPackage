@@ -6,6 +6,10 @@ Describe ConvertTo-ChocoPackage -Tag Unit {
             Get-Item |
             Where-Object { $_.BaseName -eq $_.Directory.Parent.Name }
         Import-Module $moduleManifest -Force
+
+        if (-not (Get-Module Configuration -ListAvailable)) {
+            Install-Module Configuration
+        }
     }
 
     It 'When an imported module is passed from Get-Module, creates a nupkg' {
