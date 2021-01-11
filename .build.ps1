@@ -48,4 +48,25 @@ task Test {
         }
     }
     Invoke-Pester -Configuration $configuration
+
+    if ($env:APPVEYOR_JOB_ID) {
+        $path = Join-Path -Path $PSScriptRoot -ChildPath 'build\nunit.xml'
+
+        if (Test-Path $path) {
+            $params = @{
+                Uri    = 'https://ci.appveyor.com/api/testresults/nunit/{0}' -f $env:APPVEYOR_JOB_ID
+                Method = 'POST'
+                InFile = $path
+            }
+            Invoke-WebRequest @params
+        }
+    }
+}
+
+task Publish {
+    $modulePath = Join-Path -Path $PSScriptRoot -ChildPath 'build\*\*\*.psd1' |
+        Get-Item |
+        Where-Object { $_.BaseName -eq $_.Directory.Parent.Name }
+
+    Publish-Module -Path $modulePath -NuGetApiKey $env:NuGetApiKey -Repository PSGallery -ErrorAction Stop
 }
