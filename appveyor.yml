@@ -19,9 +19,12 @@ install:
   - pwsh: |
       Install-Module Configuration, ModuleBuilder, Pester -Force -SkipPublisherCheck
       Set-Location $env:APPVEYOR_BUILD_FOLDER
+  - ps: |
+      Install-Module Pester -Force -SkipPublisherCheck
+      Set-Location $env:APPVEYOR_BUILD_FOLDER
 
 build_script:
-  - ps: |
+  - pwsh: |
       .\build.ps1 -TaskName Clean, Build
 
 test_script:
