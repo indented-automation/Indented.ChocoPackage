@@ -157,7 +157,7 @@ function ConvertTo-ChocoPackage {
                 [xml]$nuspec = Join-Path -Path $moduleBase -ChildPath 'templates\nuspec.nuspec' |
                     Get-Content -Path { $_ } -Raw
                 $metadata = $nuspec.package.metadata
-                $metadata.version = $InputObject.Version
+                $metadata.version = $InputObject.Version -as [string]
                 $metadata.title = $metadata.id = $InputObject.Name
                 $metadata.authors = $InputObject.Author
                 $metadata.copyright = $InputObject.Copyright

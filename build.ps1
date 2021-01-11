@@ -54,9 +54,10 @@ function Test {
 
         if (Test-Path $path) {
             $params = @{
-                Uri    = 'https://ci.appveyor.com/api/testresults/nunit/{0}' -f $env:APPVEYOR_JOB_ID
-                Method = 'POST'
-                InFile = $path
+                Uri         = 'https://ci.appveyor.com/api/testresults/nunit/{0}' -f $env:APPVEYOR_JOB_ID
+                Method      = 'POST'
+                InFile      = $path
+                ContentType = 'multipart/form-data'
             }
             Invoke-WebRequest @params
         }
