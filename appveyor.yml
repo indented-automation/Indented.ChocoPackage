@@ -17,10 +17,10 @@ build: false
 
 install:
   - pwsh: |
-      Install-Module Configuration, ModuleBuilder, Pester -Force -SkipPublisherCheck
+      Install-Module Configuration, ModuleBuilder, Pester, PSScriptAnalyzer -Force -SkipPublisherCheck
       Set-Location $env:APPVEYOR_BUILD_FOLDER
   - ps: |
-      Install-Module Pester -Force -SkipPublisherCheck
+      Install-Module Pester, PSScriptAnalyzer -Force -SkipPublisherCheck
       Set-Location $env:APPVEYOR_BUILD_FOLDER
 
 build_script:
