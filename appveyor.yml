@@ -17,7 +17,7 @@ build: false
 
 install:
   - pwsh: |
-      Install-Module Configuration, Pester, InvokeBuild -Force
+      Install-Module Configuration, Pester, InvokeBuild -Force -SkipPublisherCheck
       Set-Location $env:APPVEYOR_BUILD_FOLDER
 
 build_script:
