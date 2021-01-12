@@ -72,12 +72,15 @@ function Publish {
 }
 
 function WriteMessage {
+    [CmdletBinding()]
     param (
         [Parameter(Mandatory, ValueFromPipeline)]
         [string]$Message,
 
         [ValidateSet('Information', 'Warning', 'Error')]
-        [string]$Category = 'Information'
+        [string]$Category = 'Information',
+
+        [string]$Details
     )
 
     $colour = switch ($Category) {
@@ -85,7 +88,7 @@ function WriteMessage {
         'Warning' { 'Yellow' }
         'Error' { 'Red' }
     }
-    Write-Host -Message $Message -ForegroundColor $colour
+    Write-Host -Object $Message -ForegroundColor $colour
 
     if ($env:APPVEYOR_JOB_ID) {
         Add-AppveyorMessage @PSBoundParameters
@@ -107,11 +110,11 @@ function InvokeTask {
         try {
             $stopWatch = [System.Diagnostics.Stopwatch]::StartNew()
 
-            WriteMessage ('Task {0}' -f $TaskName)
+            WriteMessage -Message ('Task {0}' -f $TaskName)
             & "Script:$TaskName"
-            WriteMessage ('Done {0} {1}' -f $TaskName, $stopWatch.Elapsed)
+            WriteMessage -Message ('Done {0} {1}' -f $TaskName, $stopWatch.Elapsed)
         } catch {
-            WriteMessage ('Failed {0} {1}' -f $TaskName, $stopWatch.Elapsed) -Category Error
+            WriteMessage -Message ('Failed {0} {1}' -f $TaskName, $stopWatch.Elapsed) -Category Error -Details $_.Exception.Message
 
             exit 1
         } finally {
