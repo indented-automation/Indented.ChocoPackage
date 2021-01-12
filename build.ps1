@@ -66,9 +66,10 @@ function Test {
 function Publish {
     $modulePath = Join-Path -Path $PSScriptRoot -ChildPath 'build\*\*\*.psd1' |
         Get-Item |
-        Where-Object { $_.BaseName -eq $_.Directory.Parent.Name }
+        Where-Object { $_.BaseName -eq $_.Directory.Parent.Name } |
+        Select-Object -ExpandProperty Directory
 
-    Publish-Module -Path $modulePath -NuGetApiKey $env:NuGetApiKey -Repository PSGallery -ErrorAction Stop
+    Publish-Module -Path $modulePath.FullName -NuGetApiKey $env:NuGetApiKey -Repository PSGallery -ErrorAction Stop
 }
 
 function WriteMessage {
