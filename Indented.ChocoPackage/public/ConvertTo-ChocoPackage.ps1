@@ -144,6 +144,8 @@ function ConvertTo-ChocoPackage {
                 }
             }
 
+            Write-Host 'Testing test failure'
+
             if ($InputObject) {
                 foreach ($stage in 'Install', 'Uninstall') {
                     $name = 'chocolatey{0}.ps1' -f $stage

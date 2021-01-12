@@ -32,7 +32,8 @@ function Test {
 
     $configuration = @{
         Run          = @{
-            Path = Join-Path -Path $PSScriptRoot -ChildPath '*\tests' | Resolve-Path
+            Path     = Join-Path -Path $PSScriptRoot -ChildPath '*\tests' | Resolve-Path
+            PassThru = $true
         }
         CodeCoverage = @{
             Enabled    = $true
@@ -47,7 +48,7 @@ function Test {
             Verbosity = 'Detailed'
         }
     }
-    Invoke-Pester -Configuration $configuration
+    $testResult = Invoke-Pester -Configuration $configuration
 
     if ($env:APPVEYOR_JOB_ID) {
         $path = Join-Path -Path $PSScriptRoot -ChildPath 'build\nunit.xml'
@@ -55,6 +56,10 @@ function Test {
         if (Test-Path $path) {
             [System.Net.WebClient]::new().UploadFile(('https://ci.appveyor.com/api/testresults/nunit/{0}' -f $env:APPVEYOR_JOB_ID), $path)
         }
+    }
+
+    if ($testResult.FailedCount -gt 0) {
+        throw 'One or more tests failed!'
     }
 }
 
@@ -64,6 +69,27 @@ function Publish {
         Where-Object { $_.BaseName -eq $_.Directory.Parent.Name }
 
     Publish-Module -Path $modulePath -NuGetApiKey $env:NuGetApiKey -Repository PSGallery -ErrorAction Stop
+}
+
+function WriteMessage {
+    param (
+        [Parameter(Mandatory, ValueFromPipeline)]
+        [string]$Message,
+
+        [ValidateSet('Information', 'Warning', 'Error')]
+        [string]$Category = 'Information'
+    )
+
+    $colour = switch ($Category) {
+        'Information' { 'Cyan' }
+        'Warning' { 'Yellow' }
+        'Error' { 'Red' }
+    }
+    Write-Host -Message $Message -ForegroundColor $colour
+
+    if ($env:APPVEYOR_JOB_ID) {
+        Add-AppveyorMessage @PSBoundParameters
+    }
 }
 
 function InvokeTask {
@@ -81,12 +107,12 @@ function InvokeTask {
         try {
             $stopWatch = [System.Diagnostics.Stopwatch]::StartNew()
 
-            Write-Host ('Task {0}' -f $TaskName) -ForegroundColor Cyan
+            WriteMessage ('Task {0}' -f $TaskName)
             & "Script:$TaskName"
-            Write-Host ('Done {0} {1}' -f $TaskName, $stopWatch.Elapsed) -ForegroundColor Cyan
+            WriteMessage ('Done {0} {1}' -f $TaskName, $stopWatch.Elapsed)
         } catch {
-            Write-Host ('Failed {0} {1}' -f $TaskName, $stopWatch.Elapsed) -ForegroundColor Red
-            Write-Error -ErrorRecord $_ -ErrorAction Continue
+            WriteMessage ('Failed {0} {1}' -f $TaskName, $stopWatch.Elapsed) -Category Error
+
             exit 1
         } finally {
             $stopWatch.Stop()
