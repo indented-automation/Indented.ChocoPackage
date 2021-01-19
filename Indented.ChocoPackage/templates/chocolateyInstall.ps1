@@ -14,6 +14,10 @@ foreach ($destination in $destinations) {
 
     $modulePath = Join-Path -Path $psEditionPath -ChildPath '%MODULE_NAME%'
 
+    if ($packageParameters.ContainsKey('Replace') -and (Test-Path $modulePath)) {
+        Remove-Item -Path $modulePath -Recurse -Force -ErrorAction SilentlyContinue
+    }
+
     if (Test-Path -Path $modulePath) {
         $source = Join-Path -Path $PSScriptRoot -ChildPath '%MODULE_NAME%\*'
     } else {
