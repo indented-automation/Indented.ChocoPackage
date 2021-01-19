@@ -1,8 +1,21 @@
 $packageParameters = Get-PackageParameters
 
 $destinations = switch ($true) {
-    { $packageParameters.Count -eq 0 -or $packageParameters.ContainsKey('CoreOnly') }    { 'PowerShell\Modules' }
-    { $packageParameters.Count -eq 0 -or $packageParameters.ContainsKey('DesktopOnly') } { 'WindowsPowerShell\Modules' }
+    { $packageParameters.ContainsKey('CoreOnly') -and $packageParameters.ContainsKey('DesktopOnly') } {
+        throw 'The CoreOnly and DesktopOnly parameters are exclusive.'
+    }
+    { $packageParameters.ContainsKey('CoreOnly') } {
+        'PowerShell\Modules'
+        break
+    }
+    { $packageParameters.ContainsKey('DesktopOnly') } {
+        'WindowsPowerShell\Modules'
+        break
+    }
+    default {
+        'PowerShell\Modules'
+        'WindowsPowerShell\Modules'
+    }
 }
 
 foreach ($destination in $destinations) {
