@@ -1,7 +1,7 @@
 @{
-    CustomRulePath      = @(
-        '~\Documents\PowerShell\Modules\Indented.ScriptAnalyzerRules'
-    )
+    # CustomRulePath      = @(
+    #     '~\Documents\PowerShell\Modules\Indented.ScriptAnalyzerRules'
+    # )
     Severity            = @(
         'Error'
         'Warning'
