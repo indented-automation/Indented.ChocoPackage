@@ -28,11 +28,8 @@ function ConvertTo-ChocoPackage {
         [Parameter(Mandatory, ValueFromPipeline)]
         [ValidateScript(
             {
-                if ($_ -is [System.Management.Automation.PSModuleInfo] -or
-                    $_ -is [Microsoft.PackageManagement.Packaging.SoftwareIdentity] -or
-                    $_.PSTypeNames[0] -eq 'Microsoft.PowerShell.Commands.PSRepositoryItemInfo') {
-
-
+                $type = $_.GetType().Name
+                if ($type -in 'PSModuleInfo', 'SoftwareIdentity' -or $_.PSTypeNames[0] -eq 'Microsoft.PowerShell.Commands.PSRepositoryItemInfo') {
                     $true
                 } else {
                     throw 'InputObject must be a PSModuleInfo, SoftwareIdentity, or PSRepositoryItemInfo object.'
@@ -72,7 +69,7 @@ function ConvertTo-ChocoPackage {
 
             $source = $destination = $null
             switch ($InputObject) {
-                { $_ -is [System.Management.Automation.PSModuleInfo] } {
+                { $_.GetType().Name -eq 'PSModuleInfo' } {
                     Write-Verbose ('Building {0} from PSModuleInfo' -f $InputObject.Name)
 
                     $dependencies = $InputObject.RequiredModules
@@ -85,15 +82,9 @@ function ConvertTo-ChocoPackage {
                             ConvertTo-ChocoPackage @psboundparameters
                     }
 
-                    if ((Split-Path -Path $InputObject.ModuleBase -Leaf) -eq $InputObject.Version) {
-                        $destination = New-Item (Join-Path -Path $toolsPath -ChildPath $InputObject.Name) -ItemType Directory
-                    } else {
-                        $destination = $toolsPath
-                    }
-
-                    $source = $InputObject.ModuleBase
+                    $installLocation = $InputObject.ModuleBase
                 }
-                { $_ -is [Microsoft.PackageManagement.Packaging.SoftwareIdentity] } {
+                { $_.GetType().Name -eq 'SoftwareIdentity' } {
                     Write-Verbose ('Building {0} from SoftwareIdentity' -f $InputObject.Name)
 
                     $dependencies = $InputObject.Dependencies | Select-Object -Property @(
@@ -111,18 +102,32 @@ function ConvertTo-ChocoPackage {
                         Description = $swidTagText.SoftwareIdentity.Meta.summary
                     }
 
-                    if ((Split-Path $swidTagText.SoftwareIdentity.Meta.InstalledLocation -Leaf) -eq $InputObject.Version) {
-                        $destination = New-Item (Join-Path $toolsPath $InputObject.Name) -ItemType Directory
+                    $installLocation = $swidTagText.SoftwareIdentity.Meta.InstalledLocation
+                }
+                { $installLocation } {
+                    $source = $installLocation
+
+                    if ((Split-Path $installLocation -Leaf) -eq $InputObject.Version) {
+                        $destination = New-Item -Path (Join-Path -Path $toolsPath -ChildPath $InputObject.Name) -ItemType Directory
+                        if ($Unversioned) {
+                            # Source will be 1.2.3\*, destination will be tools\ModuleName
+                            $source = Join-Path -Path $source -ChildPath '*'
+                        }
                     } else {
-                        $destination = $toolsPath
+                        if ($Unversioned) {
+                            # Source will be ModuleName, destination will be tools
+                            $destination = $toolsPath
+                        } else {
+                            # Source will be ModuleName\*, destination will be tools\ModuleName\1.2.3
+                            $source = Join-Path -Path $source -ChildPath '*'
+                            $destination = [System.IO.Path]::Combine(
+                                $toolsPath,
+                                $InputObject.Name,
+                                $InputObject.Version
+                            ) | New-Item -Path { $_ } -ItemType Directory
+                        }
                     }
 
-                    $source = $swidTagText.SoftwareIdentity.Meta.InstalledLocation
-                }
-                { $source -and $destination } {
-                    if ($Unversioned) {
-                        $source = Join-Path -Path $source -ChildPath '*'
-                    }
                     Copy-Item -Path $source -Destination $destination -Recurse
 
                     break
@@ -141,7 +146,8 @@ function ConvertTo-ChocoPackage {
                         RequiredVersion = $InputObject.Version
                         Source          = $InputObject.Repository
                         ProviderName    = 'PowerShellGet'
-                        Path            = New-Item (Join-Path $CacheDirectory 'savedPackages') -ItemType Directory -Force
+                        Path            = New-Item (Join-Path -Path $CacheDirectory -ChildPath 'savedPackages') -ItemType Directory -Force
+                        Force           = $true
                     }
                     Save-Package @params | ConvertTo-ChocoPackage @psboundparameters
 
@@ -192,6 +198,8 @@ function ConvertTo-ChocoPackage {
 
                 $nuspecPath = Join-Path -Path $packagePath -ChildPath ('{0}.nuspec' -f $InputObject.Name)
                 $nuspec.Save($nuspecPath)
+
+                Write-Verbose ('Building {0} in {1}' -f $nuspecPath, $Path)
 
                 choco pack $nuspecPath --out=$Path
             }
