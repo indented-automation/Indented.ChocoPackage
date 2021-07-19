@@ -1,57 +1,52 @@
 @{
-    IncludeRules = @(
-        # Script functions
-        'PSAlignAssignmentStatement'
-        'PSAvoidUsingCmdletAliases'
-        'PSAvoidUsingWMICmdlet'
-        'PSAvoidUsingEmptyCatchBlock'
-        'PSUseCmdletCorrectly'
-        'PSAvoidUsingPositionalParameters'
-        'PSAvoidGlobalVars'
-        'PSAvoidUsingInvokeExpression'
-        'PSProvideCommentHelp'
-        'PSAvoidUsingPlainTextForPassword'
-        'PSAvoidUsingComputerNameHardcoded'
-        'PSAvoidUsingConvertToSecureStringWithPlainText'
-        'PSUsePSCredentialType'
-        'PSAvoidUsingUserNameAndPasswordParams'
-        'PSPlaceOpenBrace'
-        'PSPlaceCloseBrace'
-        'PSUseConsistentWhitespace'
-        'PSUseConsistentIndentation'
-        'PSAlignAssignmentStatement'
-        'PSUseCorrectCasing'
+    CustomRulePath      = @(
+        '~\Documents\PowerShell\Modules\Indented.ScriptAnalyzerRules'
     )
-    ExcludeRules = @(
+    Severity            = @(
+        'Error'
+        'Warning'
+        'Information'
+    )
+    ExcludeRules        = @(
         'PSDSC*'
+        'PSShouldProcess'
+        'PSReviewUnusedParameter'
+        'PSUseDeclaredVarsMoreThanAssignments'
+        'PSUseShouldProcessForStateChangingFunctions'
+        'UseSyntacticallyCorrectExamples'
     )
-    Rules        = @{
-        PSPlaceOpenBrace           = @{
+    IncludeDefaultRules = $true
+    Rules               = @{
+        PSAvoidUsingDoubleQuotesForConstantString = @{
+            Enable = $true
+        }
+
+        PSPlaceOpenBrace                          = @{
             Enable             = $true
             OnSameLine         = $true
             NewLineAfter       = $true
             IgnoreOneLineBlock = $true
         }
 
-        PSPlaceCloseBrace          = @{
+        PSPlaceCloseBrace                         = @{
             Enable             = $true
             NewLineAfter       = $false
             IgnoreOneLineBlock = $true
             NoEmptyLineBefore  = $false
         }
 
-        PSUseConsistentIndentation = @{
+        PSUseConsistentIndentation                = @{
             Enable              = $true
             Kind                = 'space'
             PipelineIndentation = 'IncreaseIndentationForFirstPipeline'
             IndentationSize     = 4
         }
 
-        PSUseConsistentWhitespace  = @{
+        PSUseConsistentWhitespace                 = @{
             Enable                          = $true
             CheckInnerBrace                 = $true
-            CheckOpenBrace                  = $true
-            CheckOpenParen                  = $true
+            CheckOpenBrace                  = $false
+            CheckOpenParen                  = $false
             CheckOperator                   = $false
             CheckPipe                       = $true
             CheckPipeForRedundantWhitespace = $false
@@ -59,13 +54,9 @@
             CheckParameter                  = $false
         }
 
-        PSAlignAssignmentStatement = @{
+        PSAlignAssignmentStatement                = @{
             Enable         = $true
             CheckHashtable = $true
-        }
-
-        PSUseCorrectCasing         = @{
-            Enable = $true
         }
     }
 }
