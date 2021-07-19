@@ -45,7 +45,10 @@ function ConvertTo-ChocoPackage {
         [string]$Path = '.',
 
         # A temporary directory used to stage the choco package content before packing.
-        [string]$CacheDirectory = (Join-Path -Path $env:TEMP -ChildPath (New-Guid))
+        [string]$CacheDirectory = (Join-Path -Path $env:TEMP -ChildPath (New-Guid)),
+
+        # When creating the install package, do not create a versioned directory (supports deployment of JEA role capabilities).
+        [switch]$Unversioned
     )
 
     begin {
@@ -67,6 +70,7 @@ function ConvertTo-ChocoPackage {
             $packagePath = Join-Path -Path $CacheDirectory -ChildPath $InputObject.Name.ToLower()
             $toolsPath = Join-Path -Path $packagePath -ChildPath 'tools' | New-Item -Path { $_ } -ItemType Directory
 
+            $source = $destination = $null
             switch ($InputObject) {
                 { $_ -is [System.Management.Automation.PSModuleInfo] } {
                     Write-Verbose ('Building {0} from PSModuleInfo' -f $InputObject.Name)
@@ -81,15 +85,13 @@ function ConvertTo-ChocoPackage {
                             ConvertTo-ChocoPackage @psboundparameters
                     }
 
-                    if ((Split-Path $InputObject.ModuleBase -Leaf) -eq $InputObject.Version) {
-                        $destination = New-Item (Join-Path $toolsPath $InputObject.Name) -ItemType Directory
+                    if ((Split-Path -Path $InputObject.ModuleBase -Leaf) -eq $InputObject.Version) {
+                        $destination = New-Item (Join-Path -Path $toolsPath -ChildPath $InputObject.Name) -ItemType Directory
                     } else {
                         $destination = $toolsPath
                     }
 
-                    Copy-Item $InputObject.ModuleBase -Destination $destination -Recurse
-
-                    break
+                    $source = $InputObject.ModuleBase
                 }
                 { $_ -is [Microsoft.PackageManagement.Packaging.SoftwareIdentity] } {
                     Write-Verbose ('Building {0} from SoftwareIdentity' -f $InputObject.Name)
@@ -115,7 +117,13 @@ function ConvertTo-ChocoPackage {
                         $destination = $toolsPath
                     }
 
-                    Copy-Item $swidTagText.SoftwareIdentity.Meta.InstalledLocation -Destination $destination -Recurse
+                    $source = $swidTagText.SoftwareIdentity.Meta.InstalledLocation
+                }
+                { $source -and $destination } {
+                    if ($Unversioned) {
+                        $source = Join-Path -Path $source -ChildPath '*'
+                    }
+                    Copy-Item -Path $source -Destination $destination -Recurse
 
                     break
                 }

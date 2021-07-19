@@ -38,6 +38,12 @@ foreach ($destination in $destinations) {
     }
     Copy-Item -Path $source -Destination $modulePath -Recurse -Force
 
-    Join-Path -Path $modulePath -ChildPath '%MODULE_VERSION%\chocolateyInstalled.txt' |
-        New-Item -Path { $_ } -ItemType File
+    $versionedPath = Join-Path -Path $modulePath -ChildPath '%MODULE_VERSION%'
+    if (Test-Path $versionedPath) {
+        $installMarkerPath = $versionedPath
+    } else {
+        $installMarkerPath = $modulePath
+    }
+    Join-Path -Path $installMarkerPath -ChildPath 'chocolateyInstalled.txt' |
+        New-Item -Path { $_ } -ItemType File -Force
 }

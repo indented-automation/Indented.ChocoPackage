@@ -1,14 +1,19 @@
 Describe PSScriptAnalyzer {
     BeforeDiscovery {
-        $rules = Split-Path $PSScriptRoot -Parent |
-            Get-ChildItem -File -Recurse -Include *.ps1 -Exclude *.tests.ps1 |
+        $moduleRoot = $PSScriptRoot.Substring(0, $PSScriptRoot.IndexOf('\tests'))
+        $projectRoot = $moduleRoot | Split-Path -Parent
+        $settings = Join-Path $projectRoot -ChildPath 'PSScriptAnalyzerSettings.psd1'
+
+        $rules = Get-ChildItem -Path $moduleRoot -File -Recurse -Include *.ps1 -Exclude *.tests.ps1 |
             ForEach-Object {
-                Invoke-ScriptAnalyzer -Path $_.FullName
-            } | ForEach-Object {
+                Invoke-ScriptAnalyzer -Path $_.FullName -Settings $settings
+            } |
+            Where-Object RuleName -NE 'TypeNotFound' |
+            ForEach-Object {
                 @{
                     Rule = [PSCustomObject]@{
                         RuleName   = $_.RuleName
-                        Message    = $_.Message -replace '(.{50,90}) ', "`n        `$1" -replace '^\n        '
+                        Message    = $_.Message -replace '(.{1,100})(?:\s|$)', "`n        `$1" -replace '^\n        '
                         ScriptName = $_.ScriptName
                         Line       = $_.Line
                         ScriptPath = $_.ScriptPath
