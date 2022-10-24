@@ -45,7 +45,13 @@ function ConvertTo-ChocoPackage {
         [string]$CacheDirectory = (Join-Path -Path $env:TEMP -ChildPath (New-Guid)),
 
         # When creating the install package, do not create a versioned directory (supports deployment of JEA role capabilities).
-        [switch]$Unversioned
+        [switch]$Unversioned,
+
+        # Do not download and package dependencies. Dependencies are still written to the package metadata unless the NoPackageDependencies parameter is also used.
+        [switch]$IgnoreDependencies,
+
+        # Do not write dependencies into the package metadata. Any dependent content will need manually installing.
+        [switch]$NoPackageDependencies
     )
 
     begin {
@@ -54,7 +60,7 @@ function ConvertTo-ChocoPackage {
         try {
             $null = New-Item -Path $CacheDirectory -ItemType Directory
         } catch {
-            $pscmdlet.ThrowTerminatingError($_)
+            $PSCmdlet.ThrowTerminatingError($_)
         }
 
         $moduleBase = $MyInvocation.MyCommand.Module.ModuleBase
@@ -74,12 +80,14 @@ function ConvertTo-ChocoPackage {
 
                     $dependencies = $InputObject.RequiredModules
 
-                    $null = $psboundparameters.Remove('InputObject')
-                    # Package dependencies as well
-                    foreach ($dependency in $dependencies) {
-                        Get-Module $dependency.Name -ListAvailable |
-                            Where-Object Version -EQ $dependency.Version |
-                            ConvertTo-ChocoPackage @psboundparameters
+                    $null = $PSBoundParameters.Remove('InputObject')
+                    if (-not $IgnoreDependencies) {
+                        # Package dependencies as well
+                        foreach ($dependency in $dependencies) {
+                            Get-Module $dependency.Name -ListAvailable |
+                                Where-Object Version -EQ $dependency.Version |
+                                ConvertTo-ChocoPackage @PSBoundParameters
+                        }
                     }
 
                     $installLocation = $InputObject.ModuleBase
@@ -140,7 +148,7 @@ function ConvertTo-ChocoPackage {
                         @{ Name = 'Version'; Expression = { $_['MinimumVersion'] } }
                     )
 
-                    $null = $psboundparameters.Remove('InputObject')
+                    $null = $PSBoundParameters.Remove('InputObject')
                     $params = @{
                         Name            = $InputObject.Name
                         RequiredVersion = $InputObject.Version
@@ -149,7 +157,7 @@ function ConvertTo-ChocoPackage {
                         Path            = New-Item (Join-Path -Path $CacheDirectory -ChildPath 'savedPackages') -ItemType Directory -Force
                         Force           = $true
                     }
-                    Save-Package @params | ConvertTo-ChocoPackage @psboundparameters
+                    Save-Package @params | ConvertTo-ChocoPackage @PSBoundParameters
 
                     # The current module will be last in the chain. Prevent packaging of this iteration.
                     $InputObject = $null
@@ -177,7 +185,7 @@ function ConvertTo-ChocoPackage {
                 $metadata.copyright = $InputObject.Copyright
                 $metadata.Description = $InputObject.Description
 
-                if ($dependencies) {
+                if (-not $NoPackageDependencies -and $dependencies) {
                     $fragment = [System.Text.StringBuilder]::new('<dependencies>')
 
                     $null = foreach ($dependency in $dependencies) {
@@ -204,7 +212,7 @@ function ConvertTo-ChocoPackage {
                 choco pack $nuspecPath --out=$Path
             }
         } catch {
-            Write-Error -ErrorRecord $_
+            $PSCmdlet.WriteError($_)
         } finally {
             Remove-Item $packagePath -Recurse -Force
         }
